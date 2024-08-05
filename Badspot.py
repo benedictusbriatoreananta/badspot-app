@@ -8,6 +8,7 @@ from sklearn.impute import SimpleImputer
 from streamlit_folium import st_folium
 from google.cloud import storage
 import json
+import os 
 
 # Load credentials from Streamlit secrets
 credentials = st.secrets["connections"]["gcs"]
