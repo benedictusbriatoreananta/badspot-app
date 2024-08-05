@@ -55,9 +55,22 @@ with st.sidebar:
 @st.cache(allow_output_mutation=True)
 def load_model(bucket_name, model_path, scaler_path, encoder_path):
     credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+    if not credentials_path:
+        st.error("Google Cloud credentials path is not set. Please check your .env file.")
+        return None, None, None
+
+    if not os.path.exists(credentials_path):
+        st.error(f"Credentials file not found: {credentials_path}")
+        return None, None, None
+
     with open(credentials_path) as f:
         credentials_json = json.load(f)
-    storage_client = storage.Client.from_service_account_info(credentials_json)
+    try:
+        storage_client = storage.Client.from_service_account_info(credentials_json)
+    except Exception as e:
+        st.error(f"Error initializing Google Cloud Storage client: {e}")
+        return None, None, None
+
     bucket = storage_client.bucket(bucket_name)
 
     def download_blob_to_file(blob_name, file_path):
@@ -68,13 +81,21 @@ def load_model(bucket_name, model_path, scaler_path, encoder_path):
     local_scaler_path = "local_scaler.pkl"
     local_encoder_path = "local_encoder.pkl"
 
-    download_blob_to_file(model_path, local_model_path)
-    download_blob_to_file(scaler_path, local_scaler_path)
-    download_blob_to_file(encoder_path, local_encoder_path)
+    try:
+        download_blob_to_file(model_path, local_model_path)
+        download_blob_to_file(scaler_path, local_scaler_path)
+        download_blob_to_file(encoder_path, local_encoder_path)
+    except Exception as e:
+        st.error(f"Error downloading files from GCS: {e}")
+        return None, None, None
 
-    model = joblib.load(local_model_path)
-    scaler = joblib.load(local_scaler_path)
-    label_encoder = joblib.load(local_encoder_path)
+    try:
+        model = joblib.load(local_model_path)
+        scaler = joblib.load(local_scaler_path)
+        label_encoder = joblib.load(local_encoder_path)
+    except Exception as e:
+        st.error(f"Error loading model, scaler, or encoder: {e}")
+        return None, None, None
 
     return model, scaler, label_encoder
 
@@ -84,7 +105,8 @@ def preprocess_data(data, feature_names, scaler, label_encoder):
         st.error("The input data does not contain all required columns.")
         return None
 
-    data['Cat'] = label_encoder.transform(data['Cat'])
+    if 'Cat' in data.columns:
+        data['Cat'] = label_encoder.transform(data['Cat'])
 
     numeric_cols = feature_names
     data = data[numeric_cols]
