@@ -55,20 +55,32 @@ def load_model(bucket_name, model_path, scaler_path, encoder_path):
         "client_x509_cert_url": credentials["client_x509_cert_url"],
     }
     
-    storage_client = storage.Client.from_service_account_info(credentials_dict)
-    bucket = storage_client.bucket(bucket_name)
+    try:
+        storage_client = storage.Client.from_service_account_info(credentials_dict)
+        bucket = storage_client.bucket(bucket_name)
+    except Exception as e:
+        st.error(f"Error accessing bucket: {e}")
+        return None, None, None
 
     def download_blob_to_file(blob_name, file_path):
-        blob = bucket.blob(blob_name)
-        blob.download_to_filename(file_path)
+        try:
+            blob = bucket.blob(blob_name)
+            blob.download_to_filename(file_path)
+        except Exception as e:
+            st.error(f"Error downloading {blob_name}: {e}")
+            return False
+        return True
 
     local_model_path = "local_model.pkl"
     local_scaler_path = "local_scaler.pkl"
     local_encoder_path = "local_encoder.pkl"
 
-    download_blob_to_file(model_path, local_model_path)
-    download_blob_to_file(scaler_path, local_scaler_path)
-    download_blob_to_file(encoder_path, local_encoder_path)
+    if not download_blob_to_file(model_path, local_model_path):
+        return None, None, None
+    if not download_blob_to_file(scaler_path, local_scaler_path):
+        return None, None, None
+    if not download_blob_to_file(encoder_path, local_encoder_path):
+        return None, None, None
 
     model = joblib.load(local_model_path)
     scaler = joblib.load(local_scaler_path)
