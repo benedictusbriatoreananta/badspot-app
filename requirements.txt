@@ -1,9 +1,0 @@
-streamlit
-pandas
-folium
-streamlit-folium
-joblib
-scikit-learn
-google-cloud-storage
-streamlit_option_menu
-openpyxl
