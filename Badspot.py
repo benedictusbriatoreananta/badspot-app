@@ -7,12 +7,10 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 from streamlit_folium import st_folium
 from google.cloud import storage
-import os
 import json
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load credentials from Streamlit secrets
+credentials = st.secrets["connections"]["gcs"]
 
 # Hide Streamlit style
 hide_st_style = """
@@ -54,23 +52,21 @@ with st.sidebar:
 # Define load_model function from GCS
 @st.cache(allow_output_mutation=True)
 def load_model(bucket_name, model_path, scaler_path, encoder_path):
-    credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
-    if not credentials_path:
-        st.error("Google Cloud credentials path is not set. Please check your .env file.")
-        return None, None, None
-
-    if not os.path.exists(credentials_path):
-        st.error(f"Credentials file not found: {credentials_path}")
-        return None, None, None
-
-    with open(credentials_path) as f:
-        credentials_json = json.load(f)
-    try:
-        storage_client = storage.Client.from_service_account_info(credentials_json)
-    except Exception as e:
-        st.error(f"Error initializing Google Cloud Storage client: {e}")
-        return None, None, None
-
+    # Create Google Cloud Storage client with credentials
+    credentials_dict = {
+        "type": credentials["type"],
+        "project_id": credentials["project_id"],
+        "private_key_id": credentials["private_key_id"],
+        "private_key": credentials["private_key"].replace('\\n', '\n'),
+        "client_email": credentials["client_email"],
+        "client_id": credentials["client_id"],
+        "auth_uri": credentials["auth_uri"],
+        "token_uri": credentials["token_uri"],
+        "auth_provider_x509_cert_url": credentials["auth_provider_x509_cert_url"],
+        "client_x509_cert_url": credentials["client_x509_cert_url"],
+    }
+    
+    storage_client = storage.Client.from_service_account_info(credentials_dict)
     bucket = storage_client.bucket(bucket_name)
 
     def download_blob_to_file(blob_name, file_path):
@@ -81,21 +77,13 @@ def load_model(bucket_name, model_path, scaler_path, encoder_path):
     local_scaler_path = "local_scaler.pkl"
     local_encoder_path = "local_encoder.pkl"
 
-    try:
-        download_blob_to_file(model_path, local_model_path)
-        download_blob_to_file(scaler_path, local_scaler_path)
-        download_blob_to_file(encoder_path, local_encoder_path)
-    except Exception as e:
-        st.error(f"Error downloading files from GCS: {e}")
-        return None, None, None
+    download_blob_to_file(model_path, local_model_path)
+    download_blob_to_file(scaler_path, local_scaler_path)
+    download_blob_to_file(encoder_path, local_encoder_path)
 
-    try:
-        model = joblib.load(local_model_path)
-        scaler = joblib.load(local_scaler_path)
-        label_encoder = joblib.load(local_encoder_path)
-    except Exception as e:
-        st.error(f"Error loading model, scaler, or encoder: {e}")
-        return None, None, None
+    model = joblib.load(local_model_path)
+    scaler = joblib.load(local_scaler_path)
+    label_encoder = joblib.load(local_encoder_path)
 
     return model, scaler, label_encoder
 
@@ -105,8 +93,7 @@ def preprocess_data(data, feature_names, scaler, label_encoder):
         st.error("The input data does not contain all required columns.")
         return None
 
-    if 'Cat' in data.columns:
-        data['Cat'] = label_encoder.transform(data['Cat'])
+    data['Cat'] = label_encoder.transform(data['Cat'])
 
     numeric_cols = feature_names
     data = data[numeric_cols]
@@ -210,32 +197,18 @@ if selected == "Predictions":
                         bucket_name = "badspot_predict"
                         model_path = "model/model.pkl"
                         scaler_path = "model/scaler.pkl"
-                        encoder_path = "model/label_encoder.pkl"
-
-                        model, scaler, label_encoder = load_model(bucket_name, model_path, scaler_path, encoder_path)
-
-                        if model is not None and scaler is not None and label_encoder is not None:
-                            predictions = make_predictions(model, input_data, scaler, label_encoder)
-                            if predictions is not None:
-                                st.write(predictions)
-                                display_predictions_on_map(predictions)
-                            else:
-                                st.error("Predictions could not be made.")
-                        else:
-                            st.error("Model, scaler, or label encoder could not be loaded.")
+                        encoder_path = "model/encoder.pkl"
+                        model, scaler, encoder = load_model(bucket_name, model_path, scaler_path, encoder_path)
+                        predictions = make_predictions(model, input_data, scaler, encoder)
+                        display_predictions_on_map(predictions)
                 except Exception as e:
                     st.error(f"Error processing the file: {e}")
 
 # Contributors tab
 if selected == "Contributors":
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.title("Contributors 👨‍👨‍👧‍👦")
-        st.divider()
-        st.subheader("Benedictus Briatore Ananta")
-        st.markdown(
-            """
-            Broadband Multimedia Study Program
-            Department of Electrical Engineering, Politeknik Negeri Jakarta
-            """
-        )
+    st.title("Contributors 🧑🏻‍💻")
+    st.markdown(
+        '''
+        - [Benedictus Briatore Ananta](https://www.linkedin.com/in/benedictus-briatore-ananta-ba921b281/)
+        '''
+    )
