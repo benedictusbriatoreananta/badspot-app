@@ -38,17 +38,6 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
-selected = "Menu Utama"
-
-with st.sidebar:
-    selected = option_menu(
-        menu_title="Badspot Prediction",
-        options=["Menu Utama", "Predictions", "Contributors"],
-        icons=["house", "upload", "people"],
-        menu_icon="broadcast tower",
-        default_index=0,
-    )
-
 # Define load_model function from GCS
 @st.cache(allow_output_mutation=True)
 def load_model(bucket_name, model_path, scaler_path, encoder_path):
@@ -143,6 +132,18 @@ def display_predictions_on_map(predictions):
 
     st_folium(m, width=700, height=500)
 
+# Sidebar menu
+selected = "Menu Utama"
+
+with st.sidebar:
+    selected = option_menu(
+        menu_title="Badspot Prediction",
+        options=["Menu Utama", "Predictions", "Contributors"],
+        icons=["house", "upload", "people"],
+        menu_icon="broadcast tower",
+        default_index=0,
+    )
+
 # Home tab
 if selected == "Menu Utama":
     col1, col2 = st.columns([2, 1])
@@ -197,7 +198,7 @@ if selected == "Predictions":
                         bucket_name = "badspot_predict"
                         model_path = "model/model.pkl"
                         scaler_path = "model/scaler.pkl"
-                        encoder_path = "model/encoder.pkl"
+                        encoder_path = "model/label_encoder.pkl"
                         model, scaler, encoder = load_model(bucket_name, model_path, scaler_path, encoder_path)
                         predictions = make_predictions(model, input_data, scaler, encoder)
                         display_predictions_on_map(predictions)
