@@ -1,9 +1,0 @@
-streamlit
-pandas
-folium
-streamlit-option-menu
-joblib
-scikit-learn
-streamlit_folium
-google-cloud-storage
-pip
