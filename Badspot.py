@@ -129,6 +129,7 @@ def make_predictions(model, data, scaler, label_encoder):
         predictions = model.predict(data_preprocessed)
         data['Prediction'] = predictions
 
+        # Update predictions based on specific RSRP and RSRQ values
         data['Prediction'] = data.apply(
             lambda x: 0 if x['RSRP'] >= -80 and x['RSRQ'] >= -10 else (1 if x['Prediction'] == 1 else 0),
             axis=1
@@ -241,4 +242,3 @@ if selected == "Contributors":
         - [LinkedIn](https://www.linkedin.com/in/benedictus-briatore-ananta-ba921b281/)
         - [GitHub](https://github.com/benedictusbriatoreananta/dashboard)
         """)
-
