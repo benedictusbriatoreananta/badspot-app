@@ -11,7 +11,7 @@ import json
 import os
 
 # Set environment variable for Google Cloud credentials
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'path/to/your/credentials.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'E:\Magang\persiapan sempro\SKRIPSI\File Skripsi\implementasi\fix.json'
 
 # Hide Streamlit style
 hide_st_style = """
