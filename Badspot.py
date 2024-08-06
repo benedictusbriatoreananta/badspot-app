@@ -1,32 +1,3 @@
-
-from google.cloud import storage
-import json
-
-def load_model_from_gcs(bucket_name, model_path, scaler_path, encoder_path, credentials_json):
-    try:
-        # Initialize a client
-        client = storage.Client.from_service_account_info(json.loads(credentials_json))
-
-        # Get the bucket
-        bucket = client.get_bucket(bucket_name)
-
-        # Load model
-        model_blob = bucket.blob(model_path)
-        model = joblib.load(model_blob.download_as_bytes())
-
-        # Load scaler
-        scaler_blob = bucket.blob(scaler_path)
-        scaler = joblib.load(scaler_blob.download_as_bytes())
-
-        # Load label encoder
-        encoder_blob = bucket.blob(encoder_path)
-        label_encoder = joblib.load(encoder_blob.download_as_bytes())
-
-        return model, scaler, label_encoder
-    except Exception as e:
-        st.error(f"Error loading the model, scaler, or encoder from GCS: {e}")
-        return None, None, None
-
 import streamlit as st
 import pandas as pd
 import folium
@@ -36,6 +7,9 @@ import os
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 from streamlit_folium import folium_static
+from google.cloud import storage
+from google.oauth2 import service_account
+from io import BytesIO
 
 # Hide Streamlit style
 hide_st_style = """
@@ -76,20 +50,40 @@ with st.sidebar:
         default_index=0,
     )
 
+# Google Cloud Storage setup
+credentials_path = 'E:\Magang\persiapan sempro\SKRIPSI\File Skripsi\implementasi\fix\badspot-predict-3b5c5173cf3c.json'  # Update with the path to your service account file
+bucket_name = 'model_skripsi_ml'  # Update with your GCS bucket name
+
+credentials = service_account.Credentials.from_service_account_file(credentials_path)
+client = storage.Client(credentials=credentials)
+bucket = client.bucket(bucket_name)
+
+# Define functions for GCS
+def upload_to_gcs(file, destination_blob_name):
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_file(file)
+    st.success(f'File uploaded to GCS bucket {bucket_name} as {destination_blob_name}.')
+
+def download_from_gcs(source_blob_name):
+    blob = bucket.blob(source_blob_name)
+    file_content = blob.download_as_bytes()
+    return BytesIO(file_content)
+
 # Define load_model function
 def load_model_and_scaler():
-    model_path = "E:/Magang/persiapan sempro/SKRIPSI/File Skripsi/implementasi/svc_model.pkl"
-    scaler_path = "E:/Magang/persiapan sempro/SKRIPSI/File Skripsi/implementasi/scaler.pkl"
-    encoder_path = "E:/Magang/persiapan sempro/SKRIPSI/File Skripsi/implementasi/label_encoder.pkl"
-
-    if not os.path.isfile(model_path) or not os.path.isfile(scaler_path) or not os.path.isfile(encoder_path):
-        st.error("Model, scaler, or encoder file not found.")
-        return None, None, None
+    model_path = "gs://model_skripsi_ml/svc_model.pkl"  # Update with the correct GCS path
+    scaler_path = "gs://model_skripsi_ml/scaler.pkl"    # Update with the correct GCS path
+    encoder_path = "gs://model_skripsi_ml/label_encoder.pkl"  # Update with the correct GCS path
 
     try:
-        model = joblib.load(model_path)
-        scaler = joblib.load(scaler_path)
-        label_encoder = joblib.load(encoder_path)
+        model_blob = download_from_gcs(model_path)
+        scaler_blob = download_from_gcs(scaler_path)
+        encoder_blob = download_from_gcs(encoder_path)
+
+        model = joblib.load(model_blob)
+        scaler = joblib.load(scaler_blob)
+        label_encoder = joblib.load(encoder_blob)
+
         return model, scaler, label_encoder
     except Exception as e:
         st.error(f"Error loading the model, scaler, or encoder: {e}")
@@ -97,32 +91,25 @@ def load_model_and_scaler():
 
 # Define preprocess_data function
 def preprocess_data(data, feature_names, scaler, label_encoder):
-    # Ensure all required columns are in the data
     if not all(column in data.columns for column in feature_names):
         st.error("The input data does not contain all required columns.")
         return None
 
-    # Handle non-numeric 'Cat' column
     data['Cat'] = label_encoder.transform(data['Cat'])
 
     numeric_cols = feature_names
-
     data = data[numeric_cols]
 
-    # Handle missing values if needed
     imputer = SimpleImputer(strategy='mean')
     data = imputer.fit_transform(data)
 
-    # Standardize the data
     data = scaler.transform(data)
 
     return data
 
-
 # Define make_predictions function
 def make_predictions(model, data, scaler, label_encoder):
     try:
-        # Ensure the data has all required features
         feature_names = ['Longitude', 'Latitude', 'PCI LTE', 'TAC', 'MCC', 'MNC', 'RSRP', 'RSRQ', 'DL EARFCN', 'Cat']
 
         data_preprocessed = preprocess_data(data, feature_names, scaler, label_encoder)
@@ -132,7 +119,6 @@ def make_predictions(model, data, scaler, label_encoder):
         predictions = model.predict(data_preprocessed)
         data['Prediction'] = predictions
 
-        # Apply additional conditions for Non-Badspot
         data['Prediction'] = data.apply(
             lambda x: 0 if x['RSRP'] >= -80 and x['RSRQ'] >= -10 else (1 if x['Prediction'] == 1 else 0),
             axis=1
@@ -199,6 +185,23 @@ if selected == "Predictions":
         st.title("Upload Data for Prediction 🗃️")
         st.markdown("#### Upload the Excel file containing data for prediction..")
         uploaded_file = st.file_uploader("Choose an Excel file 📂", type=['xlsx'])
+        upload_button = st.button("Upload to GCS 📤")
+
+        if uploaded_file and upload_button:
+            upload_to_gcs(uploaded_file, uploaded_file.name)
+        
+        st.divider()
+
+        st.title("Download Data from GCS 📥")
+        file_name = st.text_input("Enter the file name to download from GCS")
+        download_button = st.button("Download from GCS")
+
+        if file_name and download_button:
+            file = download_from_gcs(file_name)
+            st.download_button(label="Download file", data=file, file_name=file_name)
+        
+        st.divider()
+
         predict_button = st.button("Predict the Placement ⚡")
 
         if uploaded_file and predict_button:
@@ -238,8 +241,6 @@ if selected == "Contributors":
         st.markdown("""
         ### Team Members:
         - **Benedictus Briatore Ananta**: Data Scientist and Developer
-        - **Team Member 2**: Role
-        - **Team Member 3**: Role
         """)
 
     with col2:
