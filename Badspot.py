@@ -1,17 +1,15 @@
+from google.cloud import storage
+import os
+import json
 import streamlit as st
 import pandas as pd
 import folium
 from streamlit_option_menu import option_menu
 import joblib
+import os
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
-from streamlit_folium import st_folium
-from google.cloud import storage
-import json
-import os 
-
-# Load credentials from Streamlit secrets
-credentials = st.secrets["connections"]["gcs"]
+from streamlit_folium import folium_static
 
 # Hide Streamlit style
 hide_st_style = """
@@ -21,6 +19,7 @@ hide_st_style = """
                 header {visibility : hidden;}
                 </style>
                 """
+
 st.set_page_config(
     page_title="SMART",
     page_icon="memo",
@@ -32,6 +31,7 @@ st.set_page_config(
         'About': "## A 'Badspot Prediction Tool' by Benedictus Briatore Ananta"
     }
 )
+
 st.markdown(hide_st_style, unsafe_allow_html=True)
 st.markdown(
     """
@@ -39,76 +39,85 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
-# Define load_model function from GCS
-@st.cache(allow_output_mutation=True)
-def load_model(bucket_name, model_path, scaler_path, encoder_path):
-    # Create Google Cloud Storage client with credentials
-    credentials_dict = {
-        "type": credentials["type"],
-        "project_id": credentials["project_id"],
-        "private_key_id": credentials["private_key_id"],
-        "private_key": credentials["private_key"].replace('\\n', '\n'),
-        "client_email": credentials["client_email"],
-        "client_id": credentials["client_id"],
-        "auth_uri": credentials["auth_uri"],
-        "token_uri": credentials["token_uri"],
-        "auth_provider_x509_cert_url": credentials["auth_provider_x509_cert_url"],
-        "client_x509_cert_url": credentials["client_x509_cert_url"],
-    }
+
+selected = "Menu Utama"
+
+with st.sidebar:
+    selected = option_menu(
+        menu_title="Badspot Prediction",
+        options=["Menu Utama", "Predictions", "Contributors"],
+        icons=["house", "upload", "people"],
+        menu_icon="broadcast tower",
+        default_index=0,
+    )
+
+# Fungsi untuk menghubungkan ke GCP
+def connect_to_gcp():
+    credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+    if credentials_json is None:
+        raise ValueError("Environment variable 'GOOGLE_APPLICATION_CREDENTIALS_JSON' is not set.")
     
+    credentials_dict = json.loads(credentials_json)
+    client = storage.Client.from_service_account_info(credentials_dict)
+    return client
+
+# Contoh penggunaan fungsi connect_to_gcp
+client = connect_to_gcp()
+bucket_name = 'badspot_predict'
+bucket = client.get_bucket(bucket_name)
+
+# Test listing files in the bucket
+blobs = bucket.list_blobs()
+for blob in blobs:
+    print(blob.name)
+    
+# Define load_model function
+def load_model_and_scaler():
+    model_path = "E:/Magang/persiapan sempro/SKRIPSI/File Skripsi/implementasi/svc_model.pkl"
+    scaler_path = "E:/Magang/persiapan sempro/SKRIPSI/File Skripsi/implementasi/scaler.pkl"
+    encoder_path = "E:/Magang/persiapan sempro/SKRIPSI/File Skripsi/implementasi/label_encoder.pkl"
+
+    if not os.path.isfile(model_path) or not os.path.isfile(scaler_path) or not os.path.isfile(encoder_path):
+        st.error("Model, scaler, or encoder file not found.")
+        return None, None, None
+
     try:
-        storage_client = storage.Client.from_service_account_info(credentials_dict)
-        bucket = storage_client.bucket(bucket_name)
+        model = joblib.load(model_path)
+        scaler = joblib.load(scaler_path)
+        label_encoder = joblib.load(encoder_path)
+        return model, scaler, label_encoder
     except Exception as e:
-        st.error(f"Error accessing bucket: {e}")
+        st.error(f"Error loading the model, scaler, or encoder: {e}")
         return None, None, None
-
-    def download_blob_to_file(blob_name, file_path):
-        try:
-            blob = bucket.blob(blob_name)
-            blob.download_to_filename(file_path)
-        except Exception as e:
-            st.error(f"Error downloading {blob_name}: {e}")
-            return False
-        return True
-
-    local_model_path = "local_model.pkl"
-    local_scaler_path = "local_scaler.pkl"
-    local_encoder_path = "local_encoder.pkl"
-
-    if not download_blob_to_file(model_path, local_model_path):
-        return None, None, None
-    if not download_blob_to_file(scaler_path, local_scaler_path):
-        return None, None, None
-    if not download_blob_to_file(encoder_path, local_encoder_path):
-        return None, None, None
-
-    model = joblib.load(local_model_path)
-    scaler = joblib.load(local_scaler_path)
-    label_encoder = joblib.load(local_encoder_path)
-
-    return model, scaler, label_encoder
 
 # Define preprocess_data function
 def preprocess_data(data, feature_names, scaler, label_encoder):
+    # Ensure all required columns are in the data
     if not all(column in data.columns for column in feature_names):
         st.error("The input data does not contain all required columns.")
         return None
 
+    # Handle non-numeric 'Cat' column
     data['Cat'] = label_encoder.transform(data['Cat'])
 
     numeric_cols = feature_names
+
     data = data[numeric_cols]
 
+    # Handle missing values if needed
     imputer = SimpleImputer(strategy='mean')
     data = imputer.fit_transform(data)
+
+    # Standardize the data
     data = scaler.transform(data)
 
     return data
 
+
 # Define make_predictions function
 def make_predictions(model, data, scaler, label_encoder):
     try:
+        # Ensure the data has all required features
         feature_names = ['Longitude', 'Latitude', 'PCI LTE', 'TAC', 'MCC', 'MNC', 'RSRP', 'RSRQ', 'DL EARFCN', 'Cat']
 
         data_preprocessed = preprocess_data(data, feature_names, scaler, label_encoder)
@@ -118,6 +127,7 @@ def make_predictions(model, data, scaler, label_encoder):
         predictions = model.predict(data_preprocessed)
         data['Prediction'] = predictions
 
+        # Apply additional conditions for Non-Badspot
         data['Prediction'] = data.apply(
             lambda x: 0 if x['RSRP'] >= -80 and x['RSRQ'] >= -10 else (1 if x['Prediction'] == 1 else 0),
             axis=1
@@ -133,7 +143,7 @@ def display_predictions_on_map(predictions):
     if predictions is None or predictions.empty:
         st.error("No predictions to display on the map.")
         return
-
+    
     map_center = [predictions['Latitude'].mean(), predictions['Longitude'].mean()]
     m = folium.Map(location=map_center, zoom_start=10)
 
@@ -143,19 +153,7 @@ def display_predictions_on_map(predictions):
         color = 'red' if row['Prediction'] == 1 else 'green'
         folium.Marker(location, popup=popup_text, icon=folium.Icon(color=color)).add_to(m)
 
-    st_folium(m, width=700, height=500)
-
-# Sidebar menu
-selected = "Menu Utama"
-
-with st.sidebar:
-    selected = option_menu(
-        menu_title="Badspot Prediction",
-        options=["Menu Utama", "Predictions", "Contributors"],
-        icons=["house", "upload", "people"],
-        menu_icon="broadcast tower",
-        default_index=0,
-    )
+    folium_static(m)
 
 # Home tab
 if selected == "Menu Utama":
@@ -173,10 +171,10 @@ if selected == "Menu Utama":
         Selamat datang di situs Prediksi Badspot. Platform kami dirancang untuk lembaga pemerintah, Kementerian Komunikasi dan Informatika, dalam mengelola dan memprediksi potensi masalah yang mungkin timbul dalam domainnya masing-masing. Dengan memanfaatkan analisis prediktif tingkat lanjut, kami dapat membantu mengidentifikasi area yang berisiko mengalami inefisiensi operasional, ancaman keamanan, atau gangguan komunikasi, sehingga memungkinkan intervensi dan dukungan tepat waktu.
 
         Misi kami adalah mendukung institusi pendidikan dalam menciptakan lingkungan belajar yang aman dan produktif. Dengan memberikan tanda peringatan dini dan wawasan yang dapat ditindaklanjuti, kami bertujuan untuk memberdayakan pendidik dan administrator untuk mengambil langkah proaktif dalam mendukung lembaga pemerintah.
-
+        
         Terima kasih telah menggunakan platform kami. Kami berkomitmen untuk melakukan perbaikan terus-menerus dan menyambut masukan apa pun yang Anda miliki.
         ''')
-
+        
         st.markdown("#### `Get Started Now!`")
 
 # Prediction tab
@@ -206,23 +204,42 @@ if selected == "Predictions":
                     st.write(input_data)
                     required_columns = ['Longitude', 'Latitude', 'PCI LTE', 'TAC', 'MCC', 'MNC', 'RSRP', 'RSRQ', 'DL EARFCN', 'Cat']
                     if not all(column in input_data.columns for column in required_columns):
-                        st.error("The input data must contain all required columns.")
+                        st.error("The uploaded file does not contain all required columns.")
                     else:
-                        bucket_name = "badspot_predict"
-                        model_path = "model/model.pkl"
-                        scaler_path = "model/scaler.pkl"
-                        encoder_path = "model/label_encoder.pkl"
-                        model, scaler, encoder = load_model(bucket_name, model_path, scaler_path, encoder_path)
-                        predictions = make_predictions(model, input_data, scaler, encoder)
-                        display_predictions_on_map(predictions)
+                        input_data = input_data[required_columns]
+
+                        model, scaler, label_encoder = load_model_and_scaler()
+                        
+                        if model and scaler and label_encoder:
+                            predictions = make_predictions(model, input_data, scaler, label_encoder)
+                            if predictions is not None:
+                                input_data['Prediction'] = predictions['Prediction']
+                                st.markdown("* ## Prediction Result ✅")
+                                input_data['Label'] = input_data['Prediction'].apply(lambda x: 'Badspot' if x == 1 else 'Non-Badspot')
+                                st.write(input_data)
+
+                                # Display predictions on map
+                                display_predictions_on_map(predictions)
+                                st.success('Predictions have been successfully generated!')
+                
                 except Exception as e:
-                    st.error(f"Error processing the file: {e}")
+                    st.error(f"Error making prediction: {e}")
 
 # Contributors tab
 if selected == "Contributors":
-    st.title("Contributors 🧑🏻‍💻")
-    st.markdown(
-        '''
-        - [Benedictus Briatore Ananta](https://www.linkedin.com/in/benedictus-briatore-ananta-ba921b281/)
-        '''
-    )
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.title("Contributors 🌟")
+        st.markdown("""
+        ### Team Members:
+        - **Benedictus Briatore Ananta**: Data Scientist and Developer
+        - **Team Member 2**: Role
+        - **Team Member 3**: Role
+        """)
+
+    with col2:
+        st.markdown("## **Contact Information**")
+        st.markdown("""
+        - [LinkedIn](https://www.linkedin.com/in/benedictus-briatore-ananta-ba921b281/)
+        - [GitHub](https://github.com/benedictusbriatoreananta/dashboard)
+        """)
