@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import folium
@@ -51,18 +52,22 @@ with st.sidebar:
         default_index=0,
     )
 
-# Define GCS and credentials
-bucket_name = 'model_skripsi_ml'  # Update with your GCS bucket name
-credential_path = 'credential.json'  # Update with the correct path to your credential file
+# Upload the credential file
+st.sidebar.markdown("### Upload credential.json file")
+uploaded_credential = st.sidebar.file_uploader("Choose the credential.json file", type="json")
 
-# Load credentials
-try:
-    credentials = service_account.Credentials.from_service_account_file(credential_path)
-    client = storage.Client(credentials=credentials)
-    bucket = client.bucket(bucket_name)
-    st.sidebar.success("Credential file loaded successfully!")
-except Exception as e:
-    st.sidebar.error(f"Error loading credential file: {e}")
+if uploaded_credential:
+    try:
+        credentials = service_account.Credentials.from_service_account_info(
+            json.load(uploaded_credential)
+        )
+        client = storage.Client(credentials=credentials)
+        bucket_name = 'model_skripsi_ml'  # Update with your GCS bucket name
+        bucket = client.bucket(bucket_name)
+
+        st.sidebar.success("Credential file uploaded successfully!")
+    except Exception as e:
+        st.sidebar.error(f"Error loading credential file: {e}")
 
 # Define functions for GCS
 def upload_to_gcs(file, destination_blob_name):
@@ -125,7 +130,6 @@ def make_predictions(model, data, scaler, label_encoder):
         predictions = model.predict(data_preprocessed)
         data['Prediction'] = predictions
 
-        # Update predictions based on specific RSRP and RSRQ values
         data['Prediction'] = data.apply(
             lambda x: 0 if x['RSRP'] >= -80 and x['RSRQ'] >= -10 else (1 if x['Prediction'] == 1 else 0),
             axis=1
