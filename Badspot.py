@@ -105,11 +105,7 @@ def preprocess_data(data, feature_names, scaler, label_encoder):
         st.error("The input data does not contain all required columns.")
         return None
 
-    try:
-        data['Cat'] = label_encoder.transform(data['Cat'])
-    except Exception as e:
-        st.error(f"Error encoding 'Cat' column: {e}")
-        return None
+    data['Cat'] = label_encoder.transform(data['Cat'])
 
     numeric_cols = feature_names
     data = data[numeric_cols]
@@ -133,14 +129,10 @@ def make_predictions(model, data, scaler, label_encoder):
         predictions = model.predict(data_preprocessed)
         data['Prediction'] = predictions
 
-        # Logika untuk menentukan "Badspot" dan "Non-Badspot"
         data['Prediction'] = data.apply(
             lambda x: 0 if x['RSRP'] >= -80 and x['RSRQ'] >= -10 else (1 if x['Prediction'] == 1 else 0),
             axis=1
         )
-
-        st.write("Predictions:")
-        st.write(data[['Longitude', 'Latitude', 'RSRP', 'RSRQ', 'Prediction']])
 
         return data
     except Exception as e:
@@ -163,13 +155,6 @@ def display_predictions_on_map(predictions):
         folium.Marker(location, popup=popup_text, icon=folium.Icon(color=color)).add_to(m)
 
     folium_static(m)
-
-# Verifikasi Model dan Data
-def verify_model_and_data(model, data):
-    st.write("Model Information:")
-    st.write(model)
-    st.write("Sample Data:")
-    st.write(data.head())
 
 # Home tab
 if selected == "Menu Utama":
@@ -224,16 +209,12 @@ if selected == "Predictions":
                         input_data = input_data[required_columns]
 
                         model, scaler, label_encoder = load_model_and_scaler()
-                        verify_model_and_data(model, input_data)
                         
                         if model and scaler and label_encoder:
                             predictions = make_predictions(model, input_data, scaler, label_encoder)
                             if predictions is not None:
                                 input_data['Prediction'] = predictions['Prediction']
                                 st.markdown("* ## Prediction Result ✅")
-                                st.write("Prediction Distribution:")
-                                st.bar_chart(predictions['Prediction'].value_counts())
-                                
                                 input_data['Label'] = input_data['Prediction'].apply(lambda x: 'Badspot' if x == 1 else 'Non-Badspot')
                                 st.write(input_data)
 
@@ -260,3 +241,4 @@ if selected == "Contributors":
         - [LinkedIn](https://www.linkedin.com/in/benedictus-briatore-ananta-ba921b281/)
         - [GitHub](https://github.com/benedictusbriatoreananta/dashboard)
         """)
+
