@@ -53,7 +53,7 @@ with st.sidebar:
 
 # Define GCS and credentials
 bucket_name = 'model_skripsi_ml'  # Update with your GCS bucket name
-credential_path = 'https://storage.cloud.google.com/model_skripsi_ml/credential.json'  # Update with the path to your credential file
+credential_path = 'credential.json'  # Update with the correct path to your credential file
 
 # Load credentials
 try:
@@ -77,9 +77,9 @@ def download_from_gcs(source_blob_name):
 
 # Define load_model function
 def load_model_and_scaler():
-    model_path = "https://storage.cloud.google.com/model_skripsi_ml/svc_model.pkl"  # Update with the correct GCS path
-    scaler_path = "https://storage.cloud.google.com/model_skripsi_ml/scaler.pkl"    # Update with the correct GCS path
-    encoder_path = "https://storage.cloud.google.com/model_skripsi_ml/label_encoder.pkl"  # Update with the correct GCS path
+    model_path = "svc_model.pkl"  # Update with the correct GCS path
+    scaler_path = "scaler.pkl"    # Update with the correct GCS path
+    encoder_path = "label_encoder.pkl"  # Update with the correct GCS path
 
     try:
         model_blob = download_from_gcs(model_path)
