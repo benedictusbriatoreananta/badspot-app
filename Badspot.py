@@ -1,3 +1,32 @@
+
+from google.cloud import storage
+import json
+
+def load_model_from_gcs(bucket_name, model_path, scaler_path, encoder_path, credentials_json):
+    try:
+        # Initialize a client
+        client = storage.Client.from_service_account_info(json.loads(credentials_json))
+
+        # Get the bucket
+        bucket = client.get_bucket(bucket_name)
+
+        # Load model
+        model_blob = bucket.blob(model_path)
+        model = joblib.load(model_blob.download_as_bytes())
+
+        # Load scaler
+        scaler_blob = bucket.blob(scaler_path)
+        scaler = joblib.load(scaler_blob.download_as_bytes())
+
+        # Load label encoder
+        encoder_blob = bucket.blob(encoder_path)
+        label_encoder = joblib.load(encoder_blob.download_as_bytes())
+
+        return model, scaler, label_encoder
+    except Exception as e:
+        st.error(f"Error loading the model, scaler, or encoder from GCS: {e}")
+        return None, None, None
+
 import streamlit as st
 import pandas as pd
 import folium
