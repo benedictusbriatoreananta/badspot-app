@@ -51,22 +51,18 @@ with st.sidebar:
         default_index=0,
     )
 
-# Upload the credential file
-st.sidebar.markdown("### Upload credential.json file")
-uploaded_credential = st.sidebar.file_uploader("Choose the credential.json file", type="json")
+# Define GCS and credentials
+bucket_name = 'model_skripsi_ml'  # Update with your GCS bucket name
+credential_path = 'gs://model_skripsi_ml/credential.json'  # Update with the path to your credential file
 
-if uploaded_credential:
-    try:
-        credentials = service_account.Credentials.from_service_account_info(
-            json.load(uploaded_credential)
-        )
-        client = storage.Client(credentials=credentials)
-        bucket_name = 'model_skripsi_ml'  # Update with your GCS bucket name
-        bucket = client.bucket(bucket_name)
-
-        st.sidebar.success("Credential file uploaded successfully!")
-    except Exception as e:
-        st.sidebar.error(f"Error loading credential file: {e}")
+# Load credentials
+try:
+    credentials = service_account.Credentials.from_service_account_file(credential_path)
+    client = storage.Client(credentials=credentials)
+    bucket = client.bucket(bucket_name)
+    st.sidebar.success("Credential file loaded successfully!")
+except Exception as e:
+    st.sidebar.error(f"Error loading credential file: {e}")
 
 # Define functions for GCS
 def upload_to_gcs(file, destination_blob_name):
@@ -81,9 +77,9 @@ def download_from_gcs(source_blob_name):
 
 # Define load_model function
 def load_model_and_scaler():
-    model_path = "svc_model.pkl"  # Update with the correct GCS path
-    scaler_path = "scaler.pkl"    # Update with the correct GCS path
-    encoder_path = "label_encoder.pkl"  # Update with the correct GCS path
+    model_path = "gs://model_skripsi_ml/svc_model.pkl"  # Update with the correct GCS path
+    scaler_path = "gs://model_skripsi_ml/scaler.pkl"    # Update with the correct GCS path
+    encoder_path = "gs://model_skripsi_ml/label_encoder.pkl"  # Update with the correct GCS path
 
     try:
         model_blob = download_from_gcs(model_path)
