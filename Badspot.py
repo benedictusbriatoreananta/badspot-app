@@ -51,7 +51,7 @@ with st.sidebar:
     )
 
 # Google Cloud Storage setup
-credentials_path = 'E:\Magang\persiapan sempro\SKRIPSI\File Skripsi\implementasi\fix\badspot-predict-3b5c5173cf3c.json'  # Update with the path to your service account file
+credentials_path = 'gs://model_skripsi_ml/credential.json'  # Update with the path to your service account file
 bucket_name = 'model_skripsi_ml'  # Update with your GCS bucket name
 
 credentials = service_account.Credentials.from_service_account_file(credentials_path)
