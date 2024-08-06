@@ -189,17 +189,21 @@ if selected == "Predictions":
                         scaler_path = 'models/scaler.pkl'
                         encoder_path = 'models/label_encoder.pkl'
 
-                        credentials_json = json.loads(os.getenv('GOOGLE_APPLICATION_CREDENTIALS'))
-
-                        model, scaler, label_encoder = load_model(bucket_name, model_path, scaler_path, encoder_path, credentials_json)
-
-                        predictions = make_predictions(model, input_data, scaler, label_encoder)
-                        if predictions is not None:
-                            st.success("Predictions made successfully.")
-                            st.write(predictions)
-                            display_predictions_on_map(predictions)
+                        credentials_json_str = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+                        if not credentials_json_str:
+                            st.error("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set or is empty.")
                         else:
-                            st.error("Failed to make predictions.")
+                            credentials_json = json.loads(credentials_json_str)
+
+                            model, scaler, label_encoder = load_model(bucket_name, model_path, scaler_path, encoder_path, credentials_json)
+
+                            predictions = make_predictions(model, input_data, scaler, label_encoder)
+                            if predictions is not None:
+                                st.success("Predictions made successfully.")
+                                st.write(predictions)
+                                display_predictions_on_map(predictions)
+                            else:
+                                st.error("Failed to make predictions.")
                 except Exception as e:
                     st.error(f"Error processing the file: {e}")
 
