@@ -10,6 +10,7 @@ from streamlit_folium import folium_static
 from google.cloud import storage
 from google.oauth2 import service_account
 from io import BytesIO
+import json
 
 # Hide Streamlit style
 hide_st_style = """
@@ -194,26 +195,8 @@ if selected == "Predictions":
         st.title("Upload Data for Prediction 🗃️")
         st.markdown("#### Upload the Excel file containing data for prediction..")
         uploaded_file = st.file_uploader("Choose an Excel file 📂", type=['xlsx'])
-        upload_button = st.button("Upload to GCS 📤")
 
-        if uploaded_file and upload_button:
-            upload_to_gcs(uploaded_file, uploaded_file.name)
-        
-        st.divider()
-
-        st.title("Download Data from GCS 📥")
-        file_name = st.text_input("Enter the file name to download from GCS")
-        download_button = st.button("Download from GCS")
-
-        if file_name and download_button:
-            file = download_from_gcs(file_name)
-            st.download_button(label="Download file", data=file, file_name=file_name)
-        
-        st.divider()
-
-        predict_button = st.button("Predict the Placement ⚡")
-
-        if uploaded_file and predict_button:
+        if uploaded_file:
             with st.spinner('Processing...'):
                 try:
                     input_data = pd.read_excel(uploaded_file)
@@ -258,3 +241,4 @@ if selected == "Contributors":
         - [LinkedIn](https://www.linkedin.com/in/benedictus-briatore-ananta-ba921b281/)
         - [GitHub](https://github.com/benedictusbriatoreananta/dashboard)
         """)
+
