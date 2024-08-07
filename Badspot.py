@@ -12,7 +12,7 @@ from google.oauth2 import service_account
 from io import BytesIO
 import json
 
-# Hide Streamlit style
+# Membuat fungsi untuk menyembunyikan stye pada streamlit
 hide_st_style = """
                 <style>
                 #MainMenu {visibility : hidden;}
@@ -51,7 +51,7 @@ with st.sidebar:
         default_index=0,
     )
 
-# Upload the credential file
+# Membuat fungsi Upload the credential file
 st.sidebar.markdown("### Upload credential.json file")
 uploaded_credential = st.sidebar.file_uploader("Choose the credential.json file", type="json")
 
@@ -61,14 +61,14 @@ if uploaded_credential:
             json.load(uploaded_credential)
         )
         client = storage.Client(credentials=credentials)
-        bucket_name = 'model_skripsi_ml'  # Update with your GCS bucket name
+        bucket_name = 'model_skripsi_ml'  # Masukkan nama bucket yang sudah dibuat
         bucket = client.bucket(bucket_name)
 
         st.sidebar.success("Credential file uploaded successfully!")
     except Exception as e:
         st.sidebar.error(f"Error loading credential file: {e}")
 
-# Define functions for GCS
+# Membuat fungsi untuk upload ke Google Cloud Storage (GCS)
 def upload_to_gcs(file, destination_blob_name):
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_file(file)
@@ -79,11 +79,11 @@ def download_from_gcs(source_blob_name):
     file_content = blob.download_as_bytes()
     return BytesIO(file_content)
 
-# Define load_model function
+# Membuat fungsi load_model 
 def load_model_and_scaler():
-    model_path = "svc_model.pkl"  # Update with the correct GCS path
-    scaler_path = "scaler.pkl"    # Update with the correct GCS path
-    encoder_path = "label_encoder.pkl"  # Update with the correct GCS path
+    model_path = "svc_model.pkl"  # Masukkan nama file model yang sudah diunggah ke GCS
+    scaler_path = "scaler.pkl"    # Masukkan nama file model yang sudah diunggah ke GCS
+    encoder_path = "label_encoder.pkl"  #Masukkan nama file model yang sudah diunggah ke GCS
 
     try:
         model_blob = download_from_gcs(model_path)
@@ -99,7 +99,7 @@ def load_model_and_scaler():
         st.error(f"Error loading the model, scaler, or encoder: {e}")
         return None, None, None
 
-# Define preprocess_data function
+# Membuat fungsi preprocess_data 
 def preprocess_data(data, feature_names, scaler, label_encoder):
     if not all(column in data.columns for column in feature_names):
         st.error("The input data does not contain all required columns.")
@@ -117,7 +117,7 @@ def preprocess_data(data, feature_names, scaler, label_encoder):
 
     return data
 
-# Define make_predictions function
+# Membuat fungsi make_predictions 
 def make_predictions(model, data, scaler, label_encoder):
     try:
         feature_names = ['Longitude', 'Latitude', 'PCI LTE', 'TAC', 'MCC', 'MNC', 'RSRP', 'RSRQ', 'DL EARFCN', 'Cat']
@@ -139,7 +139,7 @@ def make_predictions(model, data, scaler, label_encoder):
         st.error(f"Error making predictions: {e}")
         return None
 
-# Membuat Peta
+# Membuat fungsi untuk menampilkan prediksi pada Peta
 def display_predictions_on_map(predictions):
     if predictions is None or predictions.empty:
         st.error("No predictions to display on the map.")
@@ -185,7 +185,8 @@ if selected == "Predictions":
         st.title("Menu Prediction ⚡")
         st.subheader("Beri data input di bawah ini 👇🏻")
         st.divider()
-        st.markdown("##### _Disini kita menggunakan algoritma <span style='color:yellow'>SVM (Support Vector Machine)🤖</span> Algoritma Pembelajaran Mesin untuk membuat Model kami untuk memprediksi letak/titik yang akan terjadinya badspot_.", unsafe_allow_html=True)
+        st.markdown("##### Disini kita menggunakan algoritma <span style='color:black'>SVM (Support Vector Machine)</span> Algoritma Pembelajaran Mesin", unsafe_allow_html=True)
+        st.markdown("##### untuk membuat Model kami untuk memprediksi letak/titik yang akan terjadinya badspot_.", unsafe_allow_html=True)
 
     st.divider()
 
@@ -231,8 +232,9 @@ if selected == "Contributors":
     with col1:
         st.title("Contributors 🌟")
         st.markdown("""
-        ### Team Members:
-        - **Benedictus Briatore Ananta**: Data Scientist and Developer
+        ### 
+        - **Benedictus Briatore Ananta**
+        - **Mahasiswa Politeknik Negeri Jakarta, Program Studi Broadband Multimedia**
         """)
 
     with col2:
