@@ -130,7 +130,7 @@ def make_predictions(model, data, scaler, label_encoder):
         data['Prediction'] = predictions
 
         data['Prediction'] = data.apply(
-            lambda x: 0 if x['RSRP'] >= -80 and x['RSRQ'] >= -10 else (1 if x['Prediction'] == 1 else 0),
+            lambda x: 0 if x['RSRP'] <= -80 and x['RSRQ'] <= -10 else (1 if x['Prediction'] == 1 else 0),
             axis=1
         )
 
