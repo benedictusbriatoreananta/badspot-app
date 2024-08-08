@@ -136,10 +136,10 @@ def make_predictions(model, data, scaler, label_encoder):
         st.write("Predictions before applying RSRP and RSRQ conditions:", data.head())
 
         # Coba tanpa kondisi tambahan terlebih dahulu
-        # data['Prediction'] = data.apply(
-        #     lambda x: 0 if x['RSRQ'] > -10 else (1 if x['Prediction'] == 1 else 0),
-        #     axis=1
-        # )
+        data['Prediction'] = data.apply(
+             lambda x: 0 if x['RSRQ'] > -10 else (1 if x['Prediction'] == 1 else 0),
+             axis=1
+         )
 
         st.write("Predictions after applying RSRP and RSRQ conditions:", data.head())
 
