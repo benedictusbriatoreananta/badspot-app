@@ -105,8 +105,6 @@ def preprocess_data(data, feature_names, scaler, label_encoder):
         st.error("The input data does not contain all required columns.")
         return None
 
-    st.write("Data before encoding and scaling:", data.head())
-
     data['Cat'] = label_encoder.transform(data['Cat'])
 
     numeric_cols = feature_names
@@ -116,8 +114,6 @@ def preprocess_data(data, feature_names, scaler, label_encoder):
     data = imputer.fit_transform(data)
 
     data = scaler.transform(data)
-
-    st.write("Data after encoding and scaling:", data[:5])
 
     return data
 
@@ -133,14 +129,10 @@ def make_predictions(model, data, scaler, label_encoder):
         predictions = model.predict(data_preprocessed)
         data['Prediction'] = predictions
 
-        st.write("Predictions before applying RSRP and RSRQ conditions:", data.head())
-
         data['Prediction'] = data.apply(
-            lambda x: 0 if x['RSRP'] <= -80 and x['RSRQ'] <= -10 else (1 if x['Prediction'] == 1 else 0),
+            lambda x: 0 if x['RSRP'] >= -80 and x['RSRQ'] >= -10 else (1 if x['Prediction'] == 1 else 0),
             axis=1
         )
-
-        st.write("Predictions after applying RSRP and RSRQ conditions:", data.head())
 
         return data
     except Exception as e:
