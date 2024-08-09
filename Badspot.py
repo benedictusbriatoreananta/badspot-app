@@ -172,7 +172,7 @@ if selected == "Menu Utama":
         ####
         Selamat datang di situs Prediksi Badspot. Platform kami dirancang untuk lembaga pemerintah, Kementerian Komunikasi dan Informatika, dalam mengelola dan memprediksi potensi masalah yang mungkin timbul dalam domainnya masing-masing. Dengan memanfaatkan analisis prediktif tingkat lanjut, kami dapat membantu mengidentifikasi area yang berisiko mengalami inefisiensi operasional, ancaman keamanan, atau gangguan komunikasi, sehingga memungkinkan intervensi dan dukungan tepat waktu.
 
-        Misi kami adalah mendukung institusi pendidikan dalam menciptakan lingkungan belajar yang aman dan produktif. Dengan memberikan tanda peringatan dini dan wawasan yang dapat ditindaklanjuti, kami bertujuan untuk memberdayakan pendidik dan administrator untuk mengambil langkah proaktif dalam mendukung lembaga pemerintah.
+        Misi kami adalah mendukung institusi dalam menciptakan lingkungan yang aman dan produktif. Dengan memberikan tanda peringatan dini dan wawasan yang dapat ditindaklanjuti, kami bertujuan untuk memberdayakan pendidik dan administrator untuk mengambil langkah proaktif dalam mendukung lembaga pemerintah.
         
         Terima kasih telah menggunakan platform kami. Kami berkomitmen untuk melakukan perbaikan terus-menerus dan menyambut masukan apa pun yang Anda miliki.
         ''')
