@@ -131,7 +131,7 @@ def make_predictions(model, data, scaler, label_encoder):
 
         # Coba tanpa kondisi tambahan terlebih dahulu
         data['Prediction'] = data.apply(
-             lambda x: 0 if x['RSRQ'] > -15 else (1 if x['Prediction'] == 1 else 0),
+             lambda x: 0 if x['RSRQ'] > -15.00 else (1 if x['Prediction'] == 1 else 0),
              axis=1
          )
 
