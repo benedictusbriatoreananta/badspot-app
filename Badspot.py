@@ -117,8 +117,6 @@ def preprocess_data(data, feature_names, scaler, label_encoder):
 
     data = scaler.transform(data)
 
-    st.write("Data after encoding and scaling:", data[:5])
-
     return data
 
 # Membuat fungsi make_predictions 
@@ -137,7 +135,7 @@ def make_predictions(model, data, scaler, label_encoder):
 
         # Coba tanpa kondisi tambahan terlebih dahulu
         data['Prediction'] = data.apply(
-             lambda x: 0 if x['RSRQ'] > -10 else (1 if x['Prediction'] == 1 else 0),
+             lambda x: 0 if x['RSRQ'] > -15 else (1 if x['Prediction'] == 1 else 0),
              axis=1
          )
 
